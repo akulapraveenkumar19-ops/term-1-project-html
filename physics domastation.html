@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ferroelectric P–E Hysteresis Project Demo</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+    body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+    h1, h2 { text-align: center; color: #d32f2f; }
+    section { background: #fff; padding: 20px; margin: 20px auto; border-radius: 15px; max-width: 1000px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+    .controls { text-align: center; margin-bottom: 20px; }
+    input { width: 80px; margin: 0 10px; }
+    #plot { width: 100%; height: 500px; }
+    p { font-size: 16px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<h1>Ferroelectric P–E Hysteresis Simulation</h1>
+
+<section>
+<h2>Introduction</h2>
+<p>
+Ferroelectric materials exhibit spontaneous polarization that can be reversed by an applied electric field. 
+The polarization-electric field (P–E) hysteresis curve shows the switching behavior and memory properties of the material. 
+This simulation helps to visualize these properties interactively.
+</p>
+</section>
+
+<section>
+<h2>Objectives</h2>
+<ul>
+    <li>Simulate P–E hysteresis curve for ferroelectric materials</li>
+    <li>Analyze switching characteristics: coercive field (Ec)</li>
+    <li>Investigate memory properties: remanent polarization (Pr)</li>
+    <li>Enable interactive exploration of material parameters (Ps, Ec)</li>
+</ul>
+</section>
+
+<section>
+<h2>Material Parameters</h2>
+<div class="controls">
+    <label>Ps: <input type="number" id="Ps" value="1" step="0.1"></label>
+    <label>Ec: <input type="number" id="Ec" value="0.5" step="0.1"></label>
+    <button onclick="updatePlot()">Update Plot</button>
+</div>
+</section>
+
+<section>
+<h2>P–E Hysteresis Curve</h2>
+<div id="plot"></div>
+</section>
+
+<section>
+<h2>Observations</h2>
+<p id="observations">Adjust Ps and Ec values and click "Update Plot" to see remanent polarization and switching behavior.</p>
+</section>
+
+<script>
+// Polarization calculation using tanh model
+function polarization(E, Ps, Ec) {
+    return E.map(e => Ps * Math.tanh(e / Ec));
+}
+
+// Generate triangular waveform for multiple cycles
+function generateE(maxE, pointsPerCycle, cycles=2) {
+    let E = [];
+    for (let i = 0; i < pointsPerCycle; i++) {
+        E.push(-maxE + (4*maxE*i)/pointsPerCycle);
+    }
+    let E_full = [];
+    for(let c=0;c<cycles;c++){
+        E_full = E_full.concat(E, E.map(e => -e));
+    }
+    return E_full;
+}
+
+// Plot hysteresis loop
+function plotHysteresis(Ps, Ec) {
+    let points = 500;
+    let maxE = 2*Ec;
+    let E = generateE(maxE, points, 2);
+    let P = polarization(E, Ps, Ec);
+
+    // Remanent polarization
+    let PrIndex = E.findIndex(e => Math.abs(e) < 0.01);
+    let Pr = P[PrIndex];
+
+    let trace = {x: E, y: P, mode: 'lines', line: {color:'crimson', width:3}, name: 'P–E Loop'};
+    let layout = {
+        title: 'Ferroelectric P–E Hysteresis Curve',
+        xaxis: {title:'Electric Field (kV/cm)'},
+        yaxis: {title:'Polarization (C/m²)'},
+        shapes:[
+            { type: 'line', x0:0, y0:Math.min(...P), x1:0, y1:Math.max(...P), line:{dash:'dash', color:'black'} },
+            { type: 'line', x0:Math.min(...E), y0:0, x1:Math.max(...E), y1:0, line:{dash:'dash', color:'black'} }
+        ],
+        annotations:[
+            { x:0, y:Pr, xref:'x', yref:'y', text:`Pr ≈ ${Pr.toFixed(2)}`, showarrow:true, arrowhead:3, ax:50, ay:-50 }
+        ]
+    };
+
+    Plotly.newPlot('plot', [trace], layout, {responsive:true});
+    document.getElementById('observations').innerHTML = `Approximate Remanent Polarization (Pr): ${Pr.toFixed(2)} C/m²`;
+}
+
+// Initial plot
+plotHysteresis(1, 0.5);
+
+// Update plot on parameter change
+function updatePlot(){
+    let Ps = parseFloat(document.getElementById('Ps').value);
+    let Ec = parseFloat(document.getElementById('Ec').value);
+    plotHysteresis(Ps, Ec);
+}
+</script>
+
+</body>
+</html>
